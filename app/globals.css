@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+body {
+  font-family: Roboto, Arial;
+  color: #212121;
+
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  cursor: pointer;
+}
+
+select {
+  cursor: pointer;
+}
+
+input,
+select,
+button {
+  font-family: Roboto, Arial;
+}
