@@ -4,15 +4,34 @@ import cartStore from "@/store/cartStore";
 import { Roboto } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
+import products from "@/data/products";
+import { useRouter } from "next/navigation";
 
 const roboto = Roboto({
   subsets: ["latin"],
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
+interface Product {
+  id: string;
+  image: string;
+  name: string;
+  rating: {
+    stars: number;
+    count: number;
+  };
+  priceCents: number;
+  keywords: string[];
+}
+
 const page = () => {
-  const { cart } = cartStore();
+  const { cart, removeProductFromCart } = cartStore();
+  const router = useRouter();
+  const cartProduct = cart.map((item) => ({
+    ...products.find((p) => p.id === item.id)!,
+    number: item.number,
+  }));
 
   let number = 0;
   cart.forEach((cartItem) => {
@@ -28,7 +47,7 @@ const page = () => {
                 width={100}
                 height={100}
                 alt="image"
-                className="w-[100px] mt-[12px] object-contain max-[575px]:hidden"
+                className="w-[95px] mt-[8px] object-contain max-[575px]:hidden"
                 src="/images/amazon-logo.png"
               />
 
@@ -50,185 +69,121 @@ const page = () => {
             )
           </div>
 
-          <div className="text-right w-[150px] max-[1000px]:w-auto">
+          <div className="text-right w-[150px] flex justify-end max-[1000px]:w-auto">
             <img src="/images/icons/checkout-lock-icon.png" />
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1100px] mt-[140px] px-[30px] md:px-0 mb-[100px] mx-auto max-[1000px]:max-w-[500px]">
+      <div className="max-w-[1100px] mt-[130px] px-[30px] md:px-0 mb-[100px] mx-auto max-[1000px]:max-w-[500px]">
         <div className="font-bold text-[22px] mb-[18px]">Review your order</div>
 
         <div className="grid grid-cols-[1fr_350px] gap-x-[12px] items-start max-[1000px]:grid-cols-1">
           <div className="order-summary">
-            <div className="border border-[#dedede] rounded-[4px] p-[18px] mb-[12px]">
-              <div className="text-[#007600] font-bold text-[19px] mt-[5px] mb-[22px]">
-                Delivery date: Tuesday, June 21
+            {number === 0 ? (
+              <div className="flex flex-col gap-2">
+                <p> Your cart is empty </p>
+                <button
+                  className="bg-[#ffd814] cursor-pointer rounded-lg  w-fit shadow-md hover:opacity-90 px-3 py-2"
+                  onClick={() => router.push("/")}
+                >
+                  View products
+                </button>
               </div>
+            ) : (
+              cartProduct.map((product) => (
+                <div
+                  key={product.id}
+                  className="border border-[#dedede] rounded-[4px] p-[18px] mb-[12px]"
+                >
+                  <div className="text-[#007600] font-bold text-[19px] mt-[5px] mb-[22px]">
+                    Delivery date: Tuesday, June 21
+                  </div>
 
-              <div className="grid grid-cols-[100px_1fr_1fr] gap-x-[25px] max-[1000px]:grid-cols-[100px_1fr] max-[1000px]:gap-y-[30px]">
-                <img
-                  className="max-w-full max-h-[120px] mx-auto"
-                  src="/images/products/athletic-cotton-socks-6-pairs.jpg"
-                />
-
-                <div className="cart-item-details">
-                  <div className="font-bold mb-[8px]">
-                    Black and Gray Athletic Cotton Socks - 6 Pairs
-                  </div>
-                  <div className="text-[#b12704] font-bold mb-[5px]">
-                    $10.90
-                  </div>
-                  <div className="product-quantity">
-                    <span>
-                      Quantity: <span className="quantity-label">2</span>
-                    </span>
-                    <span className="ml-[3px] text-[#017cb6] cursor-pointer hover:text-[#c45000]">
-                      Update
-                    </span>
-                    <span className="ml-[3px] text-[#017cb6] cursor-pointer hover:text-[#c45000]">
-                      Delete
-                    </span>
-                  </div>
-                </div>
-
-                <div className="max-[1000px]:col-span-2">
-                  <div className="font-bold mb-[10px]">
-                    Choose a delivery option:
-                  </div>
-                  <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                    <input
-                      type="radio"
-                      className="ml-0 cursor-pointer mr-[5px]"
-                      name="delivery-option-1"
+                  <div className="grid grid-cols-[100px_1fr_1fr] gap-x-[25px] max-[1000px]:grid-cols-[100px_1fr] max-[1000px]:gap-y-[30px]">
+                    <img
+                      className="max-w-full max-h-[120px] mx-auto"
+                      src={`/${product.image}`}
                     />
-                    <div>
-                      <div className="text-[#007600] font-medium mb-[3px]">
-                        Tuesday, June 21
+
+                    <div className="cart-item-details">
+                      <div className="font-bold mb-[8px]">{product.name}</div>
+                      <div className="text-[#b12704] font-bold mb-[5px]">
+                        ${(product.priceCents / 100).toFixed(2)}
                       </div>
-                      <div className="text-[#787878] text-[15px]">
-                        FREE Shipping
+                      <div className="product-quantity">
+                        <span>
+                          Quantity:{" "}
+                          <span className="quantity-label">
+                            {product.number}
+                          </span>
+                        </span>
+                        <span className="ml-[3px] text-[#017cb6] cursor-pointer hover:text-[#c45000]">
+                          Update
+                        </span>
+                        <span
+                          className="ml-[3px] text-[#017cb6] cursor-pointer hover:text-[#c45000]"
+                          onClick={() => removeProductFromCart(product.id)}
+                        >
+                          Delete
+                        </span>
                       </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                    <input
-                      type="radio"
-                      className="ml-0 cursor-pointer mr-[5px]"
-                      name="delivery-option-1"
-                    />
-                    <div>
-                      <div className="text-[#007600] font-medium mb-[3px]">
-                        Wednesday, June 15
-                      </div>
-                      <div className="text-[#787878] text-[15px]">
-                        $4.99 - Shipping
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                    <input
-                      type="radio"
-                      className="ml-0 mr-[5px] cursor-pointer"
-                      name="delivery-option-1"
-                    />
-                    <div>
-                      <div className="text-[#007600] font-medium mb-[3px]">
-                        Monday, June 13
-                      </div>
-                      <div className="text-[#787878] text-[15px]">
-                        $9.99 - Shipping
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <div className="border border-[#dedede] rounded-[4px] p-[18px] mb-[12px]">
-              <div className="text-[#007600] font-bold text-[19px] mt-[5px] mb-[22px]">
-                Delivery date: Wednesday, June 15
-              </div>
-
-              <div className="grid grid-cols-[100px_1fr_1fr] gap-x-[25px] max-[1000px]:grid-cols-[100px_1fr] max-[1000px]:gap-y-[30px]">
-                <img
-                  className="max-w-full max-h-[120px] mx-auto"
-                  src="/images/products/intermediate-composite-basketball.jpg"
-                />
-
-                <div className="cart-item-details">
-                  <div className="font-bold mb-[8px]">
-                    Intermediate Size Basketball
-                  </div>
-                  <div className="text-[#b12704] font-bold mb-[5px]">
-                    $20.95
-                  </div>
-                  <div className="product-quantity">
-                    <span>
-                      Quantity: <span className="quantity-label">1</span>
-                    </span>
-                    <span className="ml-[3px] text-[#017cb6] cursor-pointer hover:text-[#c45000]">
-                      Update
-                    </span>
-                    <span className="ml-[3px] text-[#017cb6] cursor-pointer hover:text-[#c45000]">
-                      Delete
-                    </span>
-                  </div>
-                </div>
-
-                <div className="max-[1000px]:col-span-2">
-                  <div className="font-bold mb-[10px]">
-                    Choose a delivery option:
-                  </div>
-
-                  <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                    <input
-                      type="radio"
-                      className="ml-0 mr-[5px] cursor-pointer"
-                      name="delivery-option-2"
-                    />
-                    <div>
-                      <div className="text-[#007600] font-medium mb-[3px]">
-                        Tuesday, June 21
+                    <div className="max-[1000px]:col-span-2">
+                      <div className="font-bold mb-[10px]">
+                        Choose a delivery option:
                       </div>
-                      <div className="text-[#787878] text-[15px]">
-                        FREE Shipping
+                      <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
+                        <input
+                          type="radio"
+                          className="ml-0 cursor-pointer mr-[5px]"
+                          name="delivery-option-1"
+                        />
+                        <div>
+                          <div className="text-[#007600] font-medium mb-[3px]">
+                            Tuesday, June 21
+                          </div>
+                          <div className="text-[#787878] text-[15px]">
+                            FREE Shipping
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                    <input
-                      type="radio"
-                      className="ml-0 cursor-pointer mr-[5px]"
-                      name="delivery-option-2"
-                    />
-                    <div>
-                      <div className="text-[#007600] font-medium mb-[3px]">
-                        Wednesday, June 15
+                      <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
+                        <input
+                          type="radio"
+                          className="ml-0 cursor-pointer mr-[5px]"
+                          name="delivery-option-1"
+                        />
+                        <div>
+                          <div className="text-[#007600] font-medium mb-[3px]">
+                            Wednesday, June 15
+                          </div>
+                          <div className="text-[#787878] text-[15px]">
+                            $4.99 - Shipping
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[#787878] text-[15px]">
-                        $4.99 - Shipping
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                    <input
-                      type="radio"
-                      className="ml-0 cursor-pointer mr-[5px]"
-                      name="delivery-option-2"
-                    />
-                    <div>
-                      <div className="text-[#007600] font-medium mb-[3px]">
-                        Monday, June 13
-                      </div>
-                      <div className="text-[#787878] text-[15px]">
-                        $9.99 - Shipping
+                      <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
+                        <input
+                          type="radio"
+                          className="ml-0 mr-[5px] cursor-pointer"
+                          name="delivery-option-1"
+                        />
+                        <div>
+                          <div className="text-[#007600] font-medium mb-[3px]">
+                            Monday, June 13
+                          </div>
+                          <div className="text-[#787878] text-[15px]">
+                            $9.99 - Shipping
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              ))
+            )}
           </div>
 
           <div className="border border-[#dedede] rounded-[4px] p-[18px] pb-[5px] max-[1000px]:row-start-1 max-[1000px]:mb-[12px]">
