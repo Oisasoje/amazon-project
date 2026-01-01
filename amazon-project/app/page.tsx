@@ -1,8 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
 import products from "@/data/products";
 import { Roboto } from "next/font/google";
+import { useRouter } from "next/navigation";
+import cartStore from "@/store/cartStore";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -10,12 +13,15 @@ const roboto = Roboto({
 });
 
 const page = () => {
+  const { cart, addProductToCart } = cartStore();
+  const router = useRouter();
+
   return (
     <div className={`font-roboto ${roboto.className}`}>
       <div className="bg-[#131921] text-white px-[15px] flex items-center justify-between fixed top-0 left-0 right-0 h-[60px] z-100">
         <div className="w-[180px] max-[800px]:w-auto">
           <Link
-            href="amazon.html"
+            href={"/"}
             className="inline-block p-[6px] rounded-[2px] cursor-pointer no-underline border border-transparent hover:border-white"
           >
             <img
@@ -31,7 +37,7 @@ const page = () => {
 
         <div className="flex-1 max-w-[850px] mx-[10px] flex">
           <input
-            className="flex-1 w-0 text-[16px] h-[38px] pl-[15px] border-none rounded-l-[4px] bg-white focus:outline-2 focus:outline-[#ff9900] placeholder:text-[#212121] rounded-r-none"
+            className="flex-1 w-0 text-[16px] h-[38px] pl-[15px] border-none rounded-l-[4px] bg-white focus:outline-2 focus:outline-[#ff9900] placeholder:text-[#757575] rounded-r-none"
             type="text"
             placeholder="Search"
           />
@@ -49,23 +55,25 @@ const page = () => {
 
         <div className="w-[180px] shrink-0 flex justify-end">
           <Link
-            className="inline-block p-[6px] rounded-[2px] cursor-pointer no-underline border border-transparent hover:border-white text-white"
+            className="inline-block p-1.5 rounded-xs leading-4.5 cursor-pointer no-underline border border-transparent hover:border-white text-white"
             href="orders.html"
           >
             <span className="block text-[13px]">Returns</span>
             <span className="block text-[15px] font-bold">& Orders</span>
           </Link>
 
-          <Link
-            className=" p-[6px] rounded-[2px] cursor-pointer no-underline border border-transparent hover:border-white text-white flex items-center relative"
-            href="checkout.html"
+          <div
+            onClick={() => {
+              router.push("/checkout");
+            }}
+            className=" p-[6px] rounded-[2px] leading-[18px] cursor-pointer no-underline border border-transparent hover:border-white text-white flex items-center relative"
           >
             <img className="w-[50px]" src="/images/icons/cart-icon.png" />
             <div className="text-[#f08804] text-[16px] font-bold absolute top-[4px] left-[22px] w-[26px] text-center">
-              3
+              {cart.length}
             </div>
             <div className="mt-[12px] text-[15px] font-bold">Cart</div>
-          </Link>
+          </div>
         </div>
       </div>
 
@@ -85,7 +93,7 @@ const page = () => {
                 />
               </div>
 
-              <div className="h-[40px] text-[15px] leading-5 tracking-wide">
+              <div className="h-[40px] text-[15px] leading-5 line-clamp-2 tracking-wide">
                 {name}
               </div>
 
@@ -140,6 +148,10 @@ const page = () => {
               <button
                 className="w-full p-[8px] bg-[#ffd814] text-[#212121] cursor-pointer border border-[#fcbf00] rounded-full hover:bg-[#fcbf00] hover:text-[#212121] hover:border-[#fcbf00] text-sm shadow-[0_2px_5px_rgba(213,217,217,0.5)]
  "
+                onClick={() => {
+                  addProductToCart(id);
+                  console.log(cart);
+                }}
               >
                 Add to Cart
               </button>
