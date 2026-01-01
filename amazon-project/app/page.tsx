@@ -6,6 +6,7 @@ import products from "@/data/products";
 import { Roboto } from "next/font/google";
 import { useRouter } from "next/navigation";
 import cartStore from "@/store/cartStore";
+import { useState } from "react";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -14,7 +15,12 @@ const roboto = Roboto({
 
 const page = () => {
   const { cart, addProductToCart } = cartStore();
+  const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
   const router = useRouter();
+  let number = 0;
+  cart.forEach((cartItem) => {
+    number += cartItem.number;
+  });
 
   return (
     <div className={`font-roboto ${roboto.className}`}>
@@ -66,11 +72,11 @@ const page = () => {
             onClick={() => {
               router.push("/checkout");
             }}
-            className=" p-[6px] rounded-[2px] leading-[18px] cursor-pointer no-underline border border-transparent hover:border-white text-white flex items-center relative"
+            className=" p-1.5 rounded-xs leading-4.5 cursor-pointer no-underline border border-transparent hover:border-white text-white flex items-center relative"
           >
             <img className="w-[50px]" src="/images/icons/cart-icon.png" />
             <div className="text-[#f08804] text-[16px] font-bold absolute top-[4px] left-[22px] w-[26px] text-center">
-              {cart.length}
+              {number}
             </div>
             <div className="mt-[12px] text-[15px] font-bold">Cart</div>
           </div>
@@ -103,39 +109,37 @@ const page = () => {
                   width={20}
                   height={20}
                   alt="product-rating"
-                  className="w-[100px] mr-[6px]"
+                  className="w-25 mr-1.5"
                   src={`/images/ratings/rating-${rating.stars * 10}.png`}
                 />
-                <div className="text-[#017cb6] cursor-pointer mt-[3px] hover:text-[#c45000] ">
+                <div className="text-[#017cb6] cursor-pointer mt-0.75 hover:text-[#c45000] ">
                   {rating.count}
                 </div>
               </div>
 
-              <div className="font-medium mb-[7px]">
+              <div className="font-medium mb-1.75">
                 ${(priceCents / 100).toFixed(2)}
               </div>
 
-              <div className="mb-[10px]">
+              <div className="mb-2.5">
                 <select
-                  defaultValue={1}
-                  className="text-[#212121] bg-[#f0f0f0] focus:outline-2 focus:outline-[#ff9900]  font-[15px] border-[#d5d9d9] cursor-pointer border rounded-[8px] p-[3px_5px] "
+                  className="text-[#212121] bg-[#f0f0f0] focus:outline-2 focus:outline-[#ff9900]  font-[15px] border-[#d5d9d9] cursor-pointer border rounded-2 px-1 py-0.5 "
+                  onChange={(e: any) =>
+                    setQuantities({ ...quantities, [id]: +e.target.value })
+                  }
+                  value={quantities[id] || 1}
                 >
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                  <option value="9">9</option>
-                  <option value="10">10</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className="flex-1"></div>
 
-              <div className="text-[#067d62] text-base flex items-center mb-[8px] opacity-0">
+              <div className="text-[#067d62] text-base flex items-center mb-2 opacity-0">
                 <Image
                   width={20}
                   height={20}
@@ -146,11 +150,10 @@ const page = () => {
               </div>
 
               <button
-                className="w-full p-[8px] bg-[#ffd814] text-[#212121] cursor-pointer border border-[#fcbf00] rounded-full hover:bg-[#fcbf00] hover:text-[#212121] hover:border-[#fcbf00] text-sm shadow-[0_2px_5px_rgba(213,217,217,0.5)]
+                className="w-full p-2 bg-[#ffd814] text-[#212121] cursor-pointer border border-[#fcbf00] rounded-full hover:bg-[#fcbf00] hover:text-[#212121] hover:border-[#fcbf00] text-sm shadow-[0_2px_5px_rgba(213,217,217,0.5)]
  "
                 onClick={() => {
-                  addProductToCart(id);
-                  console.log(cart);
+                  addProductToCart(id, +quantities[id] || 1);
                 }}
               >
                 Add to Cart

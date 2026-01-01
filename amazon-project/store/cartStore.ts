@@ -7,26 +7,25 @@ interface Cart {
 
 interface CartProps {
   cart: Cart[];
-  addProductToCart: (id: string) => void;
+  addProductToCart: (id: string, num: number) => void;
   removeProductFromCart: (productId: string) => void;
 }
 
 const cartStore = create<CartProps>((set) => ({
   cart: [],
-  addProductToCart: (id) =>
+  addProductToCart: (id, num) =>
     set((state) => {
-      const matchingProduct = state.cart.find((cartItem) => cartItem.id === id);
-      if (matchingProduct)
-        return {
-          cart: state.cart.map(
-            (cartItem): Cart =>
-              matchingProduct.id === cartItem.id
-                ? { ...cartItem, number: cartItem.number + 1 }
-                : cartItem
-          ),
-        };
-      else return { cart: [...state.cart, { id, number: 1 }] };
+      const exists = state.cart.some((item) => item.id === id);
+
+      return {
+        cart: exists
+          ? state.cart.map((item) =>
+              item.id === id ? { ...item, number: item.number + num } : item
+            )
+          : [...state.cart, { id, number: num }],
+      };
     }),
+
   removeProductFromCart: (productId) =>
     set((state) => ({
       cart: state.cart.filter((product) => product.id !== productId),
