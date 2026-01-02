@@ -4,9 +4,10 @@ import cartStore from "@/store/cartStore";
 import { Roboto } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import products from "@/data/products";
 import { useRouter } from "next/navigation";
+import dayjs from "dayjs";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -25,18 +26,70 @@ interface Product {
   keywords: string[];
 }
 
+interface ShippingPriceArr {
+  [key: number]: number;
+}
+
 const page = () => {
   const { cart, removeProductFromCart } = cartStore();
+  const [selectedDay, setSelectedDay] = useState<number>();
+  const [shippingByProduct, setShippingByProduct] = useState<
+    Record<string, number>
+  >({});
+
+  useEffect(() => {
+    const initialShipping: Record<string, number> = {};
+
+    cart.forEach((item) => {
+      initialShipping[item.id] = 0;
+    });
+
+    setShippingByProduct(initialShipping);
+  }, [cart]);
+
   const router = useRouter();
   const cartProduct = cart.map((item) => ({
     ...products.find((p) => p.id === item.id)!,
     number: item.number,
   }));
 
+  const itemsPriceArr = cartProduct.map(
+    (item) => item.priceCents * item.number
+  );
+  const itemsPriceInCents = itemsPriceArr.reduce((acc, currentVal) => {
+    return acc + currentVal;
+  }, 0);
+  const itemsPrice = itemsPriceInCents / 100;
+
   let number = 0;
   cart.forEach((cartItem) => {
     number += cartItem.number;
   });
+  const today = dayjs();
+  const calcDeliveryDate = () => {
+    const deliveryDays = today.add(selectedDay ? selectedDay : 7, "days");
+    return deliveryDays.format("dddd, MMMM D");
+  };
+
+  const addDay = (num: number) => {
+    const deliveryDays = today.add(num, "days");
+    return deliveryDays.format("dddd, MMMM D");
+  };
+
+  const totalShippingPriceInCents = Object.values(shippingByProduct).reduce(
+    (sum, price) => sum + price,
+    0
+  );
+
+  const totalShippingPrice = totalShippingPriceInCents / 100;
+
+  const totalBeforeTax = (itemsPriceInCents + totalShippingPriceInCents) / 100;
+
+  const estimatedTax =
+    (0.1 * (itemsPriceInCents + totalShippingPriceInCents)) / 100;
+
+  const finalPrice = totalBeforeTax + estimatedTax;
+
   return (
     <div className={`font-roboto ${roboto.className}`}>
       <div className="h-[60px] px-[30px] bg-white flex justify-center fixed top-0 left-0 right-0 z-1000">
@@ -97,7 +150,7 @@ const page = () => {
                   className="border border-[#dedede] rounded-[4px] p-[18px] mb-[12px]"
                 >
                   <div className="text-[#007600] font-bold text-[19px] mt-[5px] mb-[22px]">
-                    Delivery date: Tuesday, June 21
+                    Delivery date: {calcDeliveryDate()}
                   </div>
 
                   <div className="grid grid-cols-[100px_1fr_1fr] gap-x-[25px] max-[1000px]:grid-cols-[100px_1fr] max-[1000px]:gap-y-[30px]">
@@ -134,51 +187,43 @@ const page = () => {
                       <div className="font-bold mb-[10px]">
                         Choose a delivery option:
                       </div>
-                      <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                        <input
-                          type="radio"
-                          className="ml-0 cursor-pointer mr-[5px]"
-                          name="delivery-option-1"
-                        />
-                        <div>
-                          <div className="text-[#007600] font-medium mb-[3px]">
-                            Tuesday, June 21
-                          </div>
-                          <div className="text-[#787878] text-[15px]">
-                            FREE Shipping
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                        <input
-                          type="radio"
-                          className="ml-0 cursor-pointer mr-[5px]"
-                          name="delivery-option-1"
-                        />
-                        <div>
-                          <div className="text-[#007600] font-medium mb-[3px]">
-                            Wednesday, June 15
-                          </div>
-                          <div className="text-[#787878] text-[15px]">
-                            $4.99 - Shipping
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer">
-                        <input
-                          type="radio"
-                          className="ml-0 mr-[5px] cursor-pointer"
-                          name="delivery-option-1"
-                        />
-                        <div>
-                          <div className="text-[#007600] font-medium mb-[3px]">
-                            Monday, June 13
-                          </div>
-                          <div className="text-[#787878] text-[15px]">
-                            $9.99 - Shipping
+                      {[
+                        { id: 1, deliveryDays: 7, priceCents: 0 },
+                        { id: 2, deliveryDays: 3, priceCents: 499 },
+                        { id: 3, deliveryDays: 1, priceCents: 699 },
+                      ].map((option) => (
+                        <div
+                          className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer"
+                          key={option.id}
+                        >
+                          <input
+                            type="radio"
+                            name={`delivery-option-${product.id}`}
+                            defaultChecked={option.id === 1}
+                            onChange={() => {
+                              setShippingByProduct((prev) => ({
+                                ...prev,
+                                [product.id]: option.priceCents,
+                              }));
+
+                              setSelectedDay(option.deliveryDays);
+                            }}
+                          />
+
+                          <div>
+                            <div className="text-[#007600] font-medium mb-[3px]">
+                              {addDay(option.deliveryDays)}
+                            </div>
+                            <div className="text-[#787878] text-[15px]">
+                              {option.priceCents === 0
+                                ? "FREE Shipping"
+                                : `$${(option.priceCents / 100).toFixed(
+                                    2
+                                  )} - Shipping`}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -190,30 +235,64 @@ const page = () => {
             <div className="font-bold text-[18px] mb-[12px]">Order Summary</div>
 
             <div className="grid grid-cols-[1fr_auto] text-[15px] mb-[9px]">
-              <div>Items (3):</div>
-              <div className="text-right">$42.75</div>
+              <div>Items ({number}):</div>
+              <div className="text-right">
+                $
+                {itemsPrice.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-[1fr_auto] text-[15px] mb-[9px]">
               <div>Shipping &amp; handling:</div>
-              <div className="text-right">$4.99</div>
+              <div className="text-right">
+                {" "}
+                $
+                {totalShippingPrice.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-[1fr_auto] text-[15px] mb-[9px]">
               <div className="pt-[9px]">Total before tax:</div>
               <div className="text-right border-t border-[#dedede] pt-[9px]">
-                $47.74
+                $
+                {totalBeforeTax.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </div>
             </div>
 
             <div className="grid grid-cols-[1fr_auto] text-[15px] mb-[9px]">
               <div>Estimated tax (10%):</div>
-              <div className="text-right">$4.77</div>
+              <div className="text-right">
+                $
+                {estimatedTax.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-[1fr_auto] text-[#b12704] font-bold text-[18px] border-t border-[#dedede] pt-[18px] mb-[9px]">
               <div>Order total:</div>
-              <div className="text-right">$52.51</div>
+              <div className="text-right">
+                $
+                {(
+                  (itemsPriceInCents +
+                    totalShippingPriceInCents +
+                    0.1 * (itemsPriceInCents + totalShippingPriceInCents)) /
+                  100
+                ).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
             </div>
 
             <button className="w-full py-[8px] rounded-[8px] mt-[11px] mb-[15px] bg-[#ffd814] border border-[#fcbf00] cursor-pointer hover:bg-[#f7ca00] hover:border-[#f2c200] active:bg-[#ffd814] active:border-[#fcd200] active:shadow-none shadow-[0_2px_5px_rgba(213,217,217,0.5)] transition-all text-sm">
