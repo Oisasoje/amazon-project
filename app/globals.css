@@ -1,9 +1,19 @@
 @import "tailwindcss";
 
+:root {
+  --background: #0f1111;
+  --foreground: #ffffff;
+  --card-bg: #131921;
+  --card-border: #374151;
+  --amazon-orange: #ff9900;
+  --amazon-yellow: #febd69;
+  --text-secondary: #cccccc;
+}
+
 body {
   font-family: Roboto, Arial;
-  color: #212121;
-
+  background-color: var(--background);
+  color: var(--foreground);
   margin: 0;
 }
 
@@ -17,6 +27,9 @@ button {
 
 select {
   cursor: pointer;
+  background-color: #232f3e !important;
+  color: white !important;
+  border-color: #374151 !important;
 }
 
 input,

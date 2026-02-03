@@ -7,6 +7,8 @@ import cartStore from "@/store/cartStore";
 import products from "@/data/products";
 import { Roboto } from "next/font/google";
 import { useEffect, useState, Suspense } from "react";
+import Header from "@/app/components/Header";
+import { motion } from "framer-motion";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -17,7 +19,7 @@ const TrackingContent = () => {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const productId = searchParams.get("productId");
-  const { orders, cart } = cartStore();
+  const { orders } = cartStore();
 
   const [order, setOrder] = useState<any>(null);
   const [orderProduct, setOrderProduct] = useState<any>(null);
@@ -43,20 +45,18 @@ const TrackingContent = () => {
     }
   }, [orderId, productId, orders]);
 
-  const cartItemCount = cart.reduce((acc, item) => acc + item.number, 0);
-
   if (!order || !orderProduct || !productDetails) {
     return (
       <div
-        className={`min-h-screen flex items-center justify-center ${roboto.className}`}
+        className={`min-h-screen flex items-center justify-center bg-[#0f1111] text-white ${roboto.className}`}
       >
-        <div className="text-center">
+        <div className="text-center p-8 bg-[#131921] rounded-lg border border-[#232f3e] shadow-xl">
           <h1 className="text-2xl font-bold mb-4">
             Order or Product Not Found
           </h1>
           <Link
             href="/orders"
-            className="text-[#007185] hover:text-[#c45000] underline underline-offset-2"
+            className="text-[#febd69] hover:text-[#ff9900] underline underline-offset-4 transition-colors"
           >
             Back to Orders
           </Link>
@@ -66,112 +66,72 @@ const TrackingContent = () => {
   }
 
   return (
-    <div className={`font-roboto min-h-screen bg-white ${roboto.className}`}>
-      {/* Header - Shared with app/page.tsx */}
-      <div className="bg-[#131921] text-white px-[15px] flex items-center justify-between fixed top-0 left-0 right-0 h-[60px] z-1000">
-        <div className="w-[180px] max-[800px]:w-auto">
-          <Link
-            href={"/"}
-            className="inline-block p-[6px] rounded-[2px] cursor-pointer no-underline border border-transparent hover:border-white"
-          >
-            <img
-              alt="Amazon logo"
-              className="w-[100px] mt-[5px] max-[575px]:hidden"
-              src="/images/amazon-logo-white.png"
-            />
-            <img
-              alt="Amazon mobile logo"
-              className="hidden max-[575px]:block h-[35px] mt-[5px]"
-              src="/images/amazon-mobile-logo-white.png"
-            />
-          </Link>
-        </div>
+    <div
+      className={`font-roboto min-h-screen bg-[#0f1111] text-white ${roboto.className}`}
+    >
+      <Header />
 
-        <div className="flex-1 max-w-[850px] mx-[10px] flex">
-          <input
-            className="flex-1 w-0 text-[16px] h-[38px] pl-[15px] border-none rounded-l-[4px] bg-white focus:outline-2 focus:outline-[#ff9900] placeholder:text-[#757575] text-black"
-            type="text"
-            placeholder="Search"
-          />
-
-          <button className="bg-[#febd69] border-none w-[45px] h-[38px] rounded-r-[4px] flex items-center justify-center shrink-0 cursor-pointer">
-            <Image
-              width={20}
-              height={20}
-              alt="search-icon"
-              className="h-[22px] ml-[2px] mt-[3px]"
-              src="/images/icons/search-icon.png"
-            />
-          </button>
-        </div>
-
-        <div className="w-[180px] shrink-0 flex justify-end">
-          <Link
-            className="inline-block p-1.5 rounded-xs leading-4.5 cursor-pointer no-underline border border-transparent hover:border-white text-white"
-            href="/orders"
-          >
-            <span className="block text-[13px]">Returns</span>
-            <span className="block text-[15px] font-bold">& Orders</span>
-          </Link>
-
-          <Link
-            href="/checkout"
-            className="p-1.5 rounded-xs leading-4.5 cursor-pointer no-underline border border-transparent hover:border-white text-white flex items-center relative"
-          >
-            <img
-              alt="Cart"
-              className="w-[50px]"
-              src="/images/icons/cart-icon.png"
-            />
-            <div className="text-[#f08804] text-[16px] font-bold absolute top-[4px] left-[22px] w-[26px] text-center">
-              {cartItemCount}
-            </div>
-            <div className="mt-[12px] text-[15px] font-bold">Cart</div>
-          </Link>
-        </div>
-      </div>
-
-      <div className="max-w-[850px] mt-[90px] mb-[100px] px-[30px] mx-auto text-[#212121]">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-[850px] mt-[90px] mb-[100px] px-[30px] mx-auto"
+      >
         <Link
-          className="inline-block mb-[30px] text-[#007185] hover:text-[#c45000]"
+          className="inline-block mb-[30px] text-[#febd69] hover:text-[#ff9900] transition-colors"
           href="/orders"
         >
-          View all orders
+          &larr; View all orders
         </Link>
 
-        <div className="text-[25px] font-bold mb-[10px]">
-          Arriving on {orderProduct.deliveryDate}
+        <div className="text-[28px] font-bold mb-[10px] text-white">
+          Arriving on{" "}
+          <span className="text-[#067d62]">{orderProduct.deliveryDate}</span>
         </div>
 
-        <div className="mb-[3px]">{productDetails.name}</div>
-
-        <div className="mb-[3px]">Quantity: {orderProduct.quantity}</div>
-
-        <img
-          className="max-w-[150px] max-h-[150px] mt-[25px] mb-[50px]"
-          src={`/${productDetails.image}`}
-          alt={productDetails.name}
-        />
-
-        <div className="flex justify-between text-[20px] font-medium mb-[15px] max-[575px]:text-base max-[450px]:flex-col max-[450px]:mb-[5px]">
-          <div className="max-[450px]:mb-[3px]">Preparing</div>
-          <div className="text-[rgb(6,125,98)] max-[450px]:mb-[3px]">
-            Shipped
-          </div>
-          <div className="max-[450px]:mb-[3px]">Delivered</div>
+        <div className="mb-[10px] text-lg text-[#9ca3af]">
+          {productDetails.name}
         </div>
 
-        <div className="h-[25px] w-full border border-[rgb(200,200,200)] rounded-[50px] overflow-hidden">
-          <div className="h-full bg-green-600 rounded-[50px] w-[50%]"></div>
+        <div className="mb-[20px] text-[#9ca3af]">
+          Quantity: {orderProduct.quantity}
         </div>
-      </div>
+
+        <div className="bg-white p-4 rounded-lg inline-block mb-12 shadow-inner">
+          <img
+            className="max-w-[200px] max-h-[200px] object-contain"
+            src={`/${productDetails.image}`}
+            alt={productDetails.name}
+          />
+        </div>
+
+        <div className="flex justify-between text-[18px] font-bold mb-[15px] max-[575px]:text-sm max-[450px]:flex-col max-[450px]:mb-[5px]">
+          <div className="text-[#9ca3af]">Preparing</div>
+          <div className="text-[#067d62]">Shipped</div>
+          <div className="text-[#9ca3af]">Delivered</div>
+        </div>
+
+        <div className="h-[12px] w-full bg-[#232f3e] border border-[#374151] rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: "50%" }}
+            transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
+            className="h-full bg-linear-to-r from-[#febd69] to-[#ff9900] rounded-full"
+          ></motion.div>
+        </div>
+      </motion.div>
     </div>
   );
 };
 
 const TrackingPage = () => {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0f1111] flex items-center justify-center text-white">
+          Loading...
+        </div>
+      }
+    >
       <TrackingContent />
     </Suspense>
   );
