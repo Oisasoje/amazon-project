@@ -4,7 +4,7 @@ import cartStore from "@/store/cartStore";
 import { Roboto } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import products from "@/data/products";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
@@ -20,6 +20,9 @@ const DELIVERY_OPTIONS = [
   { id: 2, deliveryDays: 3, priceCents: 499 },
   { id: 3, deliveryDays: 1, priceCents: 699 },
 ];
+
+const MAX_QUANTITY = 99;
+const MIN_QUANTITY = 1;
 
 const Page = () => {
   const {
@@ -43,37 +46,50 @@ const Page = () => {
   const today = dayjs();
 
   useEffect(() => {
-    setShippingByProduct((prev) => {
-      const newState = { ...prev };
-      cart.forEach((item) => {
-        if (!(item.id in newState)) {
-          newState[item.id] = 0;
-        }
+    const productIds = cart.map((item) => item.id);
+    const hasNewProducts = productIds.some((id) => !(id in shippingByProduct));
+    const hasRemovedProducts = Object.keys(shippingByProduct).some(
+      (id) => !productIds.includes(id),
+    );
+
+    if (hasNewProducts || hasRemovedProducts) {
+      setShippingByProduct((prev) => {
+        const newState = { ...prev };
+
+        cart.forEach((item) => {
+          if (!(item.id in newState)) {
+            newState[item.id] = 0;
+          }
+        });
+
+        Object.keys(newState).forEach((id) => {
+          if (!cart.find((item) => item.id === id)) {
+            delete newState[id];
+          }
+        });
+
+        return newState;
       });
 
-      Object.keys(newState).forEach((id) => {
-        if (!cart.find((item) => item.id === id)) {
-          delete newState[id];
-        }
-      });
-      return newState;
-    });
+      setDeliveryDaysByProduct((prev) => {
+        const newState = { ...prev };
 
-    setDeliveryDaysByProduct((prev) => {
-      const newState = { ...prev };
-      cart.forEach((item) => {
-        if (!(item.id in newState)) {
-          newState[item.id] = 7;
-        }
+        cart.forEach((item) => {
+          if (!(item.id in newState)) {
+            newState[item.id] = 7;
+          }
+        });
+
+        Object.keys(newState).forEach((id) => {
+          if (!cart.find((item) => item.id === id)) {
+            delete newState[id];
+          }
+        });
+
+        return newState;
       });
-      Object.keys(newState).forEach((id) => {
-        if (!cart.find((item) => item.id === id)) {
-          delete newState[id];
-        }
-      });
-      return newState;
-    });
-  }, [cart]);
+    }
+  }, [cart, shippingByProduct]);
 
   const cartProduct = cart.map((item) => {
     const product = products.find((p) => p.id === item.id);
@@ -104,9 +120,12 @@ const Page = () => {
   const estimatedTaxInCents = Math.round(0.1 * totalBeforeTaxInCents);
   const orderTotalInCents = totalBeforeTaxInCents + estimatedTaxInCents;
 
-  const getDeliveryDateString = (days: number) => {
-    return today.add(days, "days").format("dddd, MMMM D");
-  };
+  const getDeliveryDateString = useCallback(
+    (days: number) => {
+      return today.add(days, "days").format("dddd, MMMM D");
+    },
+    [today],
+  );
 
   const handleUpdateClick = (id: string, currentNum: number) => {
     setEditingProductId(id);
@@ -114,15 +133,37 @@ const Page = () => {
   };
 
   const handleSaveQuantity = (id: string) => {
-    if (tempQuantity > 0 && tempQuantity <= 100) {
-      updateProductQuantity(id, tempQuantity);
+    const validQuantity = Math.max(
+      MIN_QUANTITY,
+      Math.min(MAX_QUANTITY, tempQuantity),
+    );
+
+    if (validQuantity !== tempQuantity) {
+      setTempQuantity(validQuantity);
+      return;
     }
-    setEditingProductId(null);
+
+    if (
+      !isNaN(validQuantity) &&
+      validQuantity > 0 &&
+      validQuantity <= MAX_QUANTITY
+    ) {
+      updateProductQuantity(id, validQuantity);
+      setEditingProductId(null);
+    }
+  };
+
+  const handleQuantityInput = (value: string) => {
+    const numValue = parseInt(value, 10);
+    if (value === "" || isNaN(numValue)) {
+      setTempQuantity(MIN_QUANTITY);
+    } else {
+      setTempQuantity(numValue);
+    }
   };
 
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
-    router.push("/orders");
 
     const orderProducts = cart.map((item) => ({
       id: item.id,
@@ -132,24 +173,28 @@ const Page = () => {
 
     placeOrder(orderTotalInCents, orderProducts);
     clearCart();
+
+    router.push("/orders");
   };
 
   return (
     <div
       className={`font-roboto ${roboto.className} min-h-screen bg-[#0f1111] text-white`}
     >
-      <div className="h-[60px] px-[30px] bg-[#131921] border-b border-[#232f3e] flex justify-center fixed top-0 left-0 right-0 z-50">
+      <div className="h-[60px] px-[30px] bg-[#131921] border-b border-[#232f3e] flex items-center justify-center fixed top-0 left-0 right-0 z-50">
         <div className="w-full max-w-[1100px] flex items-center justify-between">
           <div className="w-[150px] max-[575px]:w-auto">
             <Link href={"/"}>
               <Image
-                width={100}
-                height={100}
+                width={95}
+                height={35}
                 alt="Amazon logo"
                 className="w-[95px] mt-[8px] object-contain max-[575px]:hidden"
                 src="/images/amazon-logo-white.png"
               />
-              <img
+              <Image
+                width={50}
+                height={35}
                 alt="Amazon mobile logo"
                 className="hidden max-[575px]:inline-block max-[575px]:h-[35px] max-[575px]:mt-[5px]"
                 src="/images/amazon-mobile-logo-white.png"
@@ -157,7 +202,7 @@ const Page = () => {
             </Link>
           </div>
 
-          <div className="flex-1 shrink-0 text-center text-[25px] font-medium flex justify-center max-[1000px]:text-[20px] max-[1000px]:mr-[60px] max-[575px]:mr-[5px]">
+          <div className="text-[25px] font-medium flex  max-[1000px]:text-[20px] max-[1000px]:mr-[60px] max-[575px]:mr-[5px]">
             Checkout (
             <Link
               className="text-[#febd69] text-[23px] no-underline cursor-pointer max-[1000px]:text-[18px] hover:text-[#ff9900]"
@@ -166,13 +211,6 @@ const Page = () => {
               {totalItemsCount} items
             </Link>
             )
-          </div>
-
-          <div className="text-right w-[150px] flex justify-end max-[1000px]:w-auto invert">
-            <img
-              alt="Security icon"
-              src="/images/icons/checkout-lock-icon.png"
-            />
           </div>
         </div>
       </div>
@@ -188,148 +226,180 @@ const Page = () => {
 
         <div className="grid grid-cols-[1fr_350px] gap-x-[12px] items-start max-[1000px]:grid-cols-1">
           <div className="order-summary">
-            {totalItemsCount === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col gap-4 bg-[#131921] p-8 rounded-lg border border-[#232f3e]"
-              >
-                <p className="text-xl"> Your cart is empty </p>
-                <button
-                  className="bg-[#ffd814] text-[#0f1111] font-bold cursor-pointer rounded-full w-fit shadow-md hover:bg-[#fcbf00] px-6 py-2 transition-all"
-                  onClick={() => router.push("/")}
+            <AnimatePresence mode="wait">
+              {totalItemsCount === 0 ? (
+                <motion.div
+                  key="empty-cart"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="flex flex-col gap-4 bg-[#131921] p-8 rounded-lg border border-[#232f3e]"
                 >
-                  View products
-                </button>
-              </motion.div>
-            ) : (
-              <AnimatePresence>
-                {cartProduct.map((product, index) => (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="border border-[#232f3e] rounded-[4px] p-[18px] mb-[12px] bg-[#131921]"
+                  <p className="text-xl"> Your cart is empty </p>
+                  <button
+                    className="bg-[#ffd814] text-[#0f1111] font-bold cursor-pointer rounded-full w-fit shadow-md hover:bg-[#fcbf00] px-6 py-2 transition-all"
+                    onClick={() => router.push("/")}
                   >
-                    <div className="text-[#067d62] font-bold text-[19px] mt-[5px] mb-[22px]">
-                      Delivery date:{" "}
-                      {getDeliveryDateString(
-                        deliveryDaysByProduct[product.id] || 7,
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-[100px_1fr_1fr] gap-x-[25px] max-[1000px]:grid-cols-[100px_1fr] max-[1000px]:gap-y-[30px]">
-                      <div className="bg-white rounded-md p-2">
-                        <img
-                          alt={product.name}
-                          className="max-w-full max-h-[120px] mx-auto object-contain"
-                          src={`/${product.image}`}
-                        />
-                      </div>
-
-                      <div className="cart-item-details">
-                        <div className="font-bold mb-[8px] text-[#e5e7eb]">
-                          {product.name}
-                        </div>
-                        <div className="text-[#febd69] font-bold mb-[5px]">
-                          ${(product.priceCents / 100).toFixed(2)}
-                        </div>
-                        <div className="product-quantity flex items-center flex-wrap gap-2 text-sm text-[#9ca3af]">
-                          <span>
-                            Quantity:{" "}
-                            {editingProductId === product.id ? (
-                              <input
-                                type="number"
-                                min="1"
-                                max="99"
-                                value={tempQuantity}
-                                onChange={(e) =>
-                                  setTempQuantity(Number(e.target.value))
-                                }
-                                className="w-[50px] bg-[#232f3e] border border-[#374151] rounded px-1 text-white"
-                                autoFocus
-                              />
-                            ) : (
-                              <span className="font-bold text-white">
-                                {product.number}
-                              </span>
-                            )}
-                          </span>
-                          {editingProductId === product.id ? (
-                            <span
-                              className="text-[#017cb6] cursor-pointer hover:text-[#ff9900] font-medium"
-                              onClick={() => handleSaveQuantity(product.id)}
-                            >
-                              Save
-                            </span>
-                          ) : (
-                            <span
-                              className="text-[#017cb6] cursor-pointer hover:text-[#ff9900] font-medium"
-                              onClick={() =>
-                                handleUpdateClick(product.id, product.number)
-                              }
-                            >
-                              Update
-                            </span>
+                    View products
+                  </button>
+                </motion.div>
+              ) : (
+                <div key="cart-items">
+                  <AnimatePresence>
+                    {cartProduct.map((product, index) => (
+                      <motion.div
+                        key={product.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="border border-[#232f3e] rounded-[4px] p-[18px] mb-[12px] bg-[#131921]"
+                      >
+                        <div className="text-[#067d62] font-bold text-[19px] mt-[5px] mb-[22px]">
+                          Delivery date:{" "}
+                          {getDeliveryDateString(
+                            deliveryDaysByProduct[product.id] || 7,
                           )}
-                          <span
-                            className="text-[#017cb6] cursor-pointer hover:text-[#ff9900] font-medium"
-                            onClick={() => removeProductFromCart(product.id)}
-                          >
-                            Delete
-                          </span>
                         </div>
-                      </div>
 
-                      <div className="max-[1000px]:col-span-2">
-                        <div className="font-bold mb-[10px] text-sm uppercase tracking-wider text-[#9ca3af]">
-                          Choose a delivery option:
-                        </div>
-                        {DELIVERY_OPTIONS.map((option) => (
-                          <label
-                            key={option.id}
-                            className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer group"
-                          >
-                            <input
-                              type="radio"
-                              name={`delivery-option-${product.id}`}
-                              checked={
-                                (deliveryDaysByProduct[product.id] || 7) ===
-                                option.deliveryDays
-                              }
-                              onChange={() => {
-                                setShippingByProduct((prev) => ({
-                                  ...prev,
-                                  [product.id]: option.priceCents,
-                                }));
-                                setDeliveryDaysByProduct((prev) => ({
-                                  ...prev,
-                                  [product.id]: option.deliveryDays,
-                                }));
-                              }}
-                              className="mt-1 accent-[#ff9900]"
+                        <div className="grid grid-cols-[100px_1fr_1fr] gap-x-[25px] max-[1000px]:grid-cols-[100px_1fr] max-[1000px]:gap-y-[30px]">
+                          <div className="bg-white rounded-md p-2">
+                            <Image
+                              width={120}
+                              height={120}
+                              alt={product.name}
+                              className="max-w-full max-h-[120px] mx-auto object-contain"
+                              src={`/${product.image}`}
                             />
+                          </div>
 
-                            <div>
-                              <div className="text-[#067d62] font-medium mb-[3px] group-hover:text-[#ff9900]">
-                                {getDeliveryDateString(option.deliveryDays)}
-                              </div>
-                              <div className="text-[#9ca3af] text-[15px]">
-                                {option.priceCents === 0
-                                  ? "FREE Shipping"
-                                  : `$${(option.priceCents / 100).toFixed(2)} - Shipping`}
-                              </div>
+                          <div className="cart-item-details">
+                            <div className="font-bold mb-[8px] text-[#e5e7eb]">
+                              {product.name}
                             </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            )}
+                            <div className="text-[#febd69] font-bold mb-[5px]">
+                              ${(product.priceCents / 100).toFixed(2)}
+                            </div>
+                            <div className="product-quantity flex items-center flex-wrap gap-2 text-sm text-[#9ca3af]">
+                              <span>
+                                Quantity:{" "}
+                                {editingProductId === product.id ? (
+                                  <input
+                                    type="number"
+                                    min={MIN_QUANTITY}
+                                    max={MAX_QUANTITY}
+                                    value={tempQuantity}
+                                    onChange={(e) =>
+                                      handleQuantityInput(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        handleSaveQuantity(product.id);
+                                      }
+                                      if (e.key === "Escape") {
+                                        setEditingProductId(null);
+                                      }
+                                    }}
+                                    className="w-[60px] bg-[#232f3e] border border-[#374151] rounded px-2 py-1 text-white focus:ring-2 focus:ring-[#ff9900] outline-none"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span className="font-bold text-white">
+                                    {product.number}
+                                  </span>
+                                )}
+                              </span>
+                              {editingProductId === product.id ? (
+                                <>
+                                  <span
+                                    className="text-[#017cb6] cursor-pointer hover:text-[#ff9900] font-medium"
+                                    onClick={() =>
+                                      handleSaveQuantity(product.id)
+                                    }
+                                  >
+                                    Save
+                                  </span>
+                                  <span
+                                    className="text-[#9ca3af] cursor-pointer hover:text-[#e5e7eb] font-medium"
+                                    onClick={() => setEditingProductId(null)}
+                                  >
+                                    Cancel
+                                  </span>
+                                </>
+                              ) : (
+                                <span
+                                  className="text-[#017cb6] cursor-pointer hover:text-[#ff9900] font-medium"
+                                  onClick={() =>
+                                    handleUpdateClick(
+                                      product.id,
+                                      product.number,
+                                    )
+                                  }
+                                >
+                                  Update
+                                </span>
+                              )}
+                              <span
+                                className="text-[#017cb6] cursor-pointer hover:text-[#ff9900] font-medium"
+                                onClick={() =>
+                                  removeProductFromCart(product.id)
+                                }
+                              >
+                                Delete
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="max-[1000px]:col-span-2">
+                            <div className="font-bold mb-[10px] text-sm uppercase tracking-wider text-[#9ca3af]">
+                              Choose a delivery option:
+                            </div>
+                            {DELIVERY_OPTIONS.map((option) => (
+                              <label
+                                key={option.id}
+                                className="grid grid-cols-[24px_1fr] mb-[12px] cursor-pointer group"
+                              >
+                                <input
+                                  type="radio"
+                                  name={`delivery-option-${product.id}`}
+                                  checked={
+                                    (deliveryDaysByProduct[product.id] || 7) ===
+                                    option.deliveryDays
+                                  }
+                                  onChange={() => {
+                                    setShippingByProduct((prev) => ({
+                                      ...prev,
+                                      [product.id]: option.priceCents,
+                                    }));
+                                    setDeliveryDaysByProduct((prev) => ({
+                                      ...prev,
+                                      [product.id]: option.deliveryDays,
+                                    }));
+                                  }}
+                                  className="mt-1 accent-[#ff9900] cursor-pointer"
+                                />
+
+                                <div>
+                                  <div className="text-[#067d62] font-medium mb-[3px] group-hover:text-[#ff9900] transition-colors">
+                                    {getDeliveryDateString(option.deliveryDays)}
+                                  </div>
+                                  <div className="text-[#9ca3af] text-[15px]">
+                                    {option.priceCents === 0
+                                      ? "FREE Shipping"
+                                      : `$${(option.priceCents / 100).toFixed(2)} - Shipping`}
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </AnimatePresence>
           </div>
 
           <motion.div
@@ -394,11 +464,11 @@ const Page = () => {
               </div>
             </div>
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: cart.length > 0 ? 1.02 : 1 }}
+              whileTap={{ scale: cart.length > 0 ? 0.98 : 1 }}
               onClick={handlePlaceOrder}
               disabled={cart.length === 0}
-              className="w-full py-[10px] rounded-full mt-[11px] mb-[15px] bg-[#ffd814] text-[#0f1111] font-bold border border-[#fcbf00] cursor-pointer hover:bg-[#fcbf00] transition-all text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-[10px] rounded-full mt-[11px] mb-[15px] bg-[#ffd814] text-[#0f1111] font-bold border border-[#fcbf00] cursor-pointer hover:bg-[#fcbf00] transition-all text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#ffd814]"
             >
               Place your order
             </motion.button>

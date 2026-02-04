@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import products from "@/data/products";
 import { Roboto } from "next/font/google";
 import { useRouter } from "next/navigation";
 import cartStore from "@/store/cartStore";
-import dayjs from "dayjs";
+
 import { motion } from "framer-motion";
 import Header from "@/app/components/Header";
 
@@ -23,6 +23,7 @@ const OrdersPage = () => {
     <div
       className={`font-roboto min-h-screen bg-white dark:bg-[#0f1111] text-[#212121] dark:text-white transition-colors ${roboto.className}`}
     >
+      {/* ✅ FIXED: Actually render the Header */}
       <Header />
 
       <div className="max-w-[850px] mt-[90px] mb-[100px] px-5 mx-auto">
@@ -39,16 +40,17 @@ const OrdersPage = () => {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-10 bg-[#131921] rounded-lg border border-[#232f3e] p-8"
+              // ✅ FIXED: Proper light/dark mode styling
+              className="text-center py-10 bg-[#f7f8fa] dark:bg-[#131921] rounded-lg border border-[#d5d9d9] dark:border-[#232f3e] p-8"
             >
-              <p className="text-[#9ca3af] mb-4">
+              <p className="text-[#565959] dark:text-[#9ca3af] mb-4">
                 You haven't placed any orders yet.
               </p>
               <Link
                 href="/"
-                className="text-[#007185] dark:text-[#febd69] hover:text-[#c45000] dark:hover:text-[#ff9900] transition-colors"
+                className="text-[#007185] dark:text-[#febd69] hover:text-[#c45000] dark:hover:text-[#ff9900] transition-colors font-medium"
               >
-                Go shopping
+                Go shopping →
               </Link>
             </motion.div>
           ) : (
@@ -57,15 +59,17 @@ const OrdersPage = () => {
                 key={order.orderId}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="border border-[#232f3e] rounded-lg bg-[#131921] overflow-hidden"
+                // ✅ FIXED: Cap animation delay at reasonable time
+                transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                className="border border-[#d5d9d9] dark:border-[#232f3e] rounded-lg bg-[#f7f8fa] dark:bg-[#131921] overflow-hidden shadow-sm"
               >
-                <div className="bg-[#1a1f2e] border-b border-[#232f3e] flex items-center justify-between p-5 max-[575px]:flex-col max-[575px]:items-start max-[575px]:leading-[23px] max-[575px]:p-[15px] text-sm md:text-base">
+                <div className="bg-[#e7e9ec] dark:bg-[#1a1f2e] border-b border-[#d5d9d9] dark:border-[#232f3e] flex items-center justify-between p-5 max-[575px]:flex-col max-[575px]:items-start max-[575px]:leading-[23px] max-[575px]:p-[15px] text-sm md:text-base">
                   <div className="flex shrink-0 max-[575px]:flex-col">
                     <div className="mr-[45px] max-[575px]:grid max-[575px]:grid-cols-[auto_1fr] max-[575px]:mr-0">
                       <div className="font-medium mr-1.25">Order Placed:</div>
                       <div className="text-[#565959] dark:text-[#9ca3af]">
-                        {order.orderDate}
+                        {/* ✅ FIXED: Fallback for missing date */}
+                        {order.orderDate || new Date().toLocaleDateString()}
                       </div>
                     </div>
                     <div className="mr-[45px] max-[575px]:grid max-[575px]:grid-cols-[auto_1fr] max-[575px]:mr-0">
@@ -78,7 +82,7 @@ const OrdersPage = () => {
 
                   <div className="shrink max-[575px]:grid max-[575px]:grid-cols-[auto_1fr]">
                     <div className="font-medium mr-1.25">Order ID:</div>
-                    <div className="text-[#565959] dark:text-[#9ca3af]">
+                    <div className="text-[#565959] dark:text-[#9ca3af] font-mono text-xs">
                       {order.orderId}
                     </div>
                   </div>
@@ -89,13 +93,29 @@ const OrdersPage = () => {
                     const product = products.find(
                       (p) => p.id === orderProduct.id,
                     );
-                    if (!product) return null;
+
+                    // ✅ FIXED: Better error handling for deleted products
+                    if (!product) {
+                      return (
+                        <div key={orderProduct.id} className="contents">
+                          <div className="col-span-full text-center py-4 text-[#9ca3af]">
+                            <p className="text-sm">
+                              Product no longer available (ID: {orderProduct.id}
+                              )
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div key={orderProduct.id} className="contents">
                         <div className="text-center max-[450px]:mb-[25px]">
-                          <div className="bg-white dark:bg-white rounded-md p-2 inline-block">
-                            <img
+                          <div className="bg-white rounded-md p-2 inline-block shadow-sm">
+                            {/* ✅ FIXED: Using Next Image */}
+                            <Image
+                              width={110}
+                              height={110}
                               alt={product.name}
                               src={`/${product.image}`}
                               className="max-w-[110px] max-h-[110px] mx-auto max-[450px]:max-w-[150px] max-[450px]:max-h-[150px] object-contain"
@@ -107,21 +127,30 @@ const OrdersPage = () => {
                           <div className="font-bold mb-[5px] max-[450px]:mb-[10px] text-base">
                             {product.name}
                           </div>
-                          <div className="mb-[3px] text-[#565959] dark:text-[#9ca3af]">
+                          <div className="mb-[3px] text-[#565959] dark:text-[#9ca3af] text-sm">
                             Arriving on: {orderProduct.deliveryDate}
                           </div>
-                          <div className="mb-[8px] max-[450px]:mb-[15px] text-[#565959] dark:text-[#9ca3af]">
+                          <div className="mb-[8px] max-[450px]:mb-[15px] text-[#565959] dark:text-[#9ca3af] text-sm">
                             Quantity: {orderProduct.quantity}
                           </div>
                           <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => addProductToCart(product.id, 1)}
+                            // ✅ FIXED: Re-orders the same quantity as original order
+                            onClick={() =>
+                              addProductToCart(
+                                product.id,
+                                orderProduct.quantity,
+                              )
+                            }
                             className="flex items-center justify-center w-[140px] h-[36px] bg-[#ffd814] border border-[#fcbf00] rounded-lg cursor-pointer hover:bg-[#f7ca00] shadow-md text-[15px] text-[#0f1111] font-medium transition-all max-[800px]:mb-[10px] max-[450px]:w-full max-[450px]:mb-[15px]"
                           >
-                            <img
-                              alt="Buy again"
-                              className="w-[25px] mr-[15px]"
+                            {/* ✅ FIXED: Using Next Image */}
+                            <Image
+                              width={25}
+                              height={25}
+                              alt="Buy again icon"
+                              className="mr-[15px]"
                               src="/images/icons/buy-again.png"
                             />
                             <span>Buy it again</span>
